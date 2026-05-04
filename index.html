@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weekly Schedule Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #1e2d4e; --navy-h: #2a3f6f;
+  --bg: #f2f0eb; --card: #ffffff; --amber: #e8a000;
+  --border: #ddd8cc; --text: #1c1c2e; --muted: #7a7a8c; --radius: 8px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans','Segoe UI',sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; }
+
+/* ── Header ── */
+.hd { background: var(--navy); color:#fff; padding:14px 20px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+.hd-title { font-family:'Lora',serif; font-size:19px; font-weight:600; }
+.hd-sub { font-size:11px; opacity:.55; margin-top:2px; font-weight:300; }
+.week-nav { display:flex; align-items:center; gap:10px; }
+.nav-btn { background:rgba(255,255,255,.13); border:1px solid rgba(255,255,255,.22); color:#fff; width:30px; height:30px; border-radius:6px; cursor:pointer; font-size:17px; display:flex; align-items:center; justify-content:center; transition:background .15s; }
+.nav-btn:hover { background:rgba(255,255,255,.22); }
+.week-lbl { font-family:'DM Mono',monospace; font-size:12px; min-width:190px; text-align:center; opacity:.9; }
+.hd-actions { display:flex; gap:7px; flex-wrap:wrap; }
+.btn { padding:6px 13px; border-radius:6px; border:none; cursor:pointer; font-size:12px; font-family:inherit; font-weight:500; display:inline-flex; align-items:center; gap:5px; transition:all .15s; white-space:nowrap; }
+.btn-ghost { background:rgba(255,255,255,.13); color:#fff; border:1px solid rgba(255,255,255,.22); }
+.btn-ghost:hover { background:rgba(255,255,255,.22); }
+.btn-amber { background:var(--amber); color:#1a1000; }
+.btn-amber:hover { background:#d49200; }
+
+/* ── Sync bar ── */
+.sync-bar { display:flex; align-items:center; gap:10px; padding:7px 20px; background:#162039; color:rgba(255,255,255,.75); font-size:11px; flex-wrap:wrap; border-bottom:1px solid #0d1726; }
+.sync-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.dot-ok { background:#22c55e; }
+.dot-off { background:#f59e0b; }
+.dot-err { background:#ef4444; }
+.dot-spin { background:#60a5fa; animation:pulse 1s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+.sync-msg { flex:1; }
+.sync-actions { display:flex; gap:6px; }
+
+/* ── Legend ── */
+.legend { display:flex; align-items:center; gap:14px; padding:8px 20px; background:var(--card); border-bottom:1px solid var(--border); flex-wrap:wrap; }
+.lbl { font-size:11px; color:var(--muted); font-weight:500; }
+.li { display:flex; align-items:center; gap:5px; font-size:11px; color:var(--muted); }
+.ld { width:11px; height:11px; border-radius:3px; flex-shrink:0; }
+
+/* ── Grid ── */
+.wrap { padding:16px 20px; overflow-x:auto; }
+.grid { display:grid; grid-template-columns:76px repeat(5,1fr); gap:1px; min-width:620px; background:var(--border); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+.dh { background:var(--navy); color:#fff; padding:10px 6px; text-align:center; }
+.dh.corner { background:#162039; }
+.dn { font-weight:600; font-size:12px; letter-spacing:.3px; }
+.dd { font-size:10px; opacity:.55; margin-top:2px; font-family:'DM Mono',monospace; }
+.dh.today-hd { background:var(--amber); color:#160d00; }
+.tc { background:#edeae3; padding:0 10px; display:flex; flex-direction:column; align-items:flex-end; justify-content:center; font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); min-height:66px; }
+.tc.lt { background:#faf4e0; }
+.lunch-tag { font-size:9px; color:#c07800; text-transform:uppercase; letter-spacing:.4px; margin-top:3px; }
+.sc { background:var(--card); min-height:66px; padding:5px; cursor:pointer; transition:background .12s; }
+.sc:hover { background:#eeeaff; }
+.sc.ls { background:#fdf8e6; }
+.sc.ls:hover { background:#faf0c0; }
+.sc.tc-col { background:#fafdf0; }
+.cc { border-radius:6px; padding:6px 8px; height:100%; min-height:54px; display:flex; flex-direction:column; justify-content:center; border-left:3px solid transparent; transition:transform .1s; }
+.sc:hover .cc { transform:scale(1.012); }
+.cn { font-size:11.5px; font-weight:600; line-height:1.3; }
+.cbadge { font-size:9.5px; margin-top:3px; font-weight:400; opacity:.75; }
+.cc.cancelled { background:#f0f0f4 !important; border-left-color:#a0a0b0 !important; }
+.cc.cancelled .cn { text-decoration:line-through; color:#a0a0b0 !important; }
+.cc.modified { outline:1.5px dashed #7c3aed; outline-offset:-2px; }
+.cc.added { background:#d4f5e6 !important; border-left-color:#059669 !important; }
+.cc.added .cn { color:#065f46 !important; }
+.sc.gs .cc { border-bottom-left-radius:0; border-bottom-right-radius:0; }
+.sc.gm .cc { border-radius:0; border-top:1.5px dashed rgba(0,0,0,.12); }
+.sc.ge .cc { border-top-left-radius:0; border-top-right-radius:0; border-top:1.5px dashed rgba(0,0,0,.12); }
+.cont-dot { font-size:11px; opacity:.3; text-align:center; }
+.add-hint { display:flex; align-items:center; justify-content:center; height:100%; min-height:54px; color:#c0b8d0; font-size:22px; opacity:0; transition:opacity .15s; }
+.sc:hover .add-hint { opacity:1; }
+
+/* ── Modal ── */
+.overlay { position:fixed; inset:0; background:rgba(0,0,0,.38); display:flex; align-items:center; justify-content:center; z-index:200; backdrop-filter:blur(3px); }
+.overlay.hid { display:none; }
+.mbox { background:#fff; border-radius:14px; padding:22px; width:90%; max-width:440px; box-shadow:0 20px 60px rgba(0,0,0,.22); animation:pop .14s ease-out; max-height:90vh; overflow-y:auto; }
+@keyframes pop { from{transform:scale(.94);opacity:0} to{transform:scale(1);opacity:1} }
+.mh { font-family:'Lora',serif; font-size:16px; font-weight:600; color:var(--navy); }
+.ms { font-size:11px; color:var(--muted); margin:3px 0 12px; font-family:'DM Mono',monospace; }
+.mcn { font-size:14px; font-weight:600; padding:9px 12px; background:#f3f2ee; border-radius:7px; margin-bottom:14px; }
+.mlbl { font-size:11px; color:var(--muted); display:block; margin-bottom:5px; }
+.minp { width:100%; padding:9px 11px; border:1.5px solid var(--border); border-radius:7px; font-family:inherit; font-size:13px; outline:none; transition:border-color .15s; }
+.minp:focus { border-color:var(--navy); }
+.mdef { font-size:10px; color:var(--muted); margin-top:4px; margin-bottom:10px; }
+.mdiv { border:none; border-top:1px solid var(--border); margin:12px 0; }
+.macts { display:flex; gap:7px; flex-wrap:wrap; margin-top:14px; }
+.btn-prim { background:var(--navy); color:#fff; flex:1; }
+.btn-prim:hover { background:var(--navy-h); }
+.btn-danger { background:#fee2e2; color:#c0392b; flex:1; }
+.btn-danger:hover { background:#fbc8c8; }
+.btn-restore { background:#d4f5e6; color:#065f46; flex:1; }
+.btn-restore:hover { background:#a8ead0; }
+.btn-sec { background:#f0eee8; color:var(--text); }
+.btn-sec:hover { background:#e2e0da; }
+.badge { display:inline-flex; align-items:center; gap:4px; font-size:10px; padding:2px 8px; border-radius:20px; font-weight:600; letter-spacing:.3px; text-transform:uppercase; margin-bottom:10px; }
+.ba { background:#dbeafe; color:#1e40af; }
+.bm { background:#ede9fe; color:#5b21b6; }
+.bc { background:#f0f0f4; color:#6b7280; }
+.bg { background:#d4f5e6; color:#065f46; }
+.reset-link { background:none; border:none; cursor:pointer; font-size:11px; color:var(--muted); text-decoration:underline; margin-top:6px; display:block; text-align:center; font-family:inherit; }
+.reset-link:hover { color:var(--navy); }
+
+/* ── Settings modal ── */
+.set-section { margin-bottom:16px; }
+.set-title { font-size:13px; font-weight:600; color:var(--navy); margin-bottom:8px; }
+.set-row { display:flex; flex-direction:column; gap:5px; margin-bottom:10px; }
+.set-hint { font-size:10.5px; color:var(--muted); line-height:1.5; }
+.set-hint a { color:var(--navy); }
+.inp-row { display:flex; gap:6px; }
+.inp-row .minp { flex:1; }
+.step-box { background:#f6f4ef; border-radius:8px; padding:12px 14px; margin-top:4px; }
+.step { display:flex; gap:10px; align-items:flex-start; margin-bottom:8px; font-size:11.5px; line-height:1.5; }
+.step:last-child { margin-bottom:0; }
+.sn { background:var(--navy); color:#fff; width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; flex-shrink:0; margin-top:1px; }
+.code { background:#e8e4da; padding:1px 5px; border-radius:3px; font-family:'DM Mono',monospace; font-size:10.5px; }
+.status-pill { display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+.sp-ok { background:#d4f5e6; color:#065f46; }
+.sp-err { background:#fee2e2; color:#c0392b; }
+.sp-off { background:#fef3c7; color:#92400e; }
+
+/* ── Footer ── */
+.ft { text-align:center; padding:14px; font-size:11px; color:var(--muted); border-top:1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<div class="hd">
+  <div>
+    <div class="hd-title">📅 Weekly Schedule Manager</div>
+    <div class="hd-sub">Dept. of Oceanography — Prof. Planner</div>
+  </div>
+  <div class="week-nav">
+    <button class="nav-btn" onclick="changeWeek(-1)">‹</button>
+    <div class="week-lbl" id="weekLbl">—</div>
+    <button class="nav-btn" onclick="changeWeek(1)">›</button>
+  </div>
+  <div class="hd-actions">
+    <button class="btn btn-ghost" onclick="goNow()">📍 This Week</button>
+    <button class="btn btn-ghost" onclick="resetWeek()">↺ Reset Week</button>
+    <button class="btn btn-amber" onclick="openSettings()">⚙ Sync Setup</button>
+  </div>
+</div>
+
+<!-- Sync status bar -->
+<div class="sync-bar" id="syncBar">
+  <div class="sync-dot dot-off" id="syncDot"></div>
+  <div class="sync-msg" id="syncMsg">Sync not configured — click <strong>⚙ Sync Setup</strong> to enable cross-device sync</div>
+  <div class="sync-actions">
+    <button class="btn btn-ghost" id="pullBtn" style="padding:3px 9px;font-size:11px" onclick="pullFromGist(true)" title="Pull latest from cloud">⬇ Pull</button>
+    <button class="btn btn-ghost" id="pushBtn" style="padding:3px 9px;font-size:11px" onclick="pushToGist(true)" title="Push changes to cloud">⬆ Push</button>
+  </div>
+</div>
+
+<div class="legend">
+  <span class="lbl">Legend:</span>
+  <span class="li"><span class="ld" style="background:#dbeafe;border:2px solid #2563eb"></span>Regular class</span>
+  <span class="li"><span class="ld" style="background:#ede9fe;outline:1.5px dashed #7c3aed;outline-offset:-1px"></span>Renamed</span>
+  <span class="li"><span class="ld" style="background:#f0f0f4;border:2px solid #a0a0b0"></span>Cancelled</span>
+  <span class="li"><span class="ld" style="background:#d4f5e6;border:2px solid #059669"></span>Added this week</span>
+  <span class="li"><span class="ld" style="background:#fdf8e6;border:2px solid #d4a000"></span>Lunch</span>
+</div>
+
+<div class="wrap"><div class="grid" id="grid"></div></div>
+
+<div class="ft">💾 Auto-saved locally · ☁ GitHub Gist sync enabled when configured · Click any slot to manage it</div>
+
+<!-- Class / add modal -->
+<div class="overlay hid" id="overlay" onclick="overlayClick(event)">
+  <div class="mbox" id="mbox"></div>
+</div>
+
+<!-- Settings modal -->
+<div class="overlay hid" id="setOverlay" onclick="setOverlayClick(event)">
+  <div class="mbox" id="setBox" style="max-width:500px"></div>
+</div>
+
+<script>
+// ── Constants ─────────────────────────────────────────────────────────────────
+const DAYS   = ['Sunday','Monday','Tuesday','Wednesday','Thursday'];
+const DSHORT = ['Sun','Mon','Tue','Wed','Thu'];
+const SLOTS  = ['9–10 AM','10–11 AM','11–12 PM','12–1 PM','1–2 PM','2–3 PM','3–4 PM'];
+const SLBLS  = ['9:00','10:00','11:00','12:00','13:00','14:00','15:00'];
+const LUNCH  = 4;
+
+const DEF = {
+  0: { 3:'Chemical Oceanography' },
+  1: { 0:'Chemical Oceanography', 1:'Chemical Oceanography',
+       2:'Fundamental to Oceanography Lab', 3:'Fundamental to Oceanography Lab' },
+  2: { 2:'Comp. Programming for Oceanographers Lab',
+       3:'Comp. Programming for Oceanographers Lab',
+       4:'Comp. Programming for Oceanographers Lab' },
+  3: { 1:'Delta and River System', 2:'Delta and River System' },
+  4: { 1:'Computer Programming for Oceanographers',
+       2:'Computer Programming for Oceanographers',
+       3:'Computer Programming for Oceanographers' }
+};
+
+const PALETTES = [
+  ['#dbeafe','#2563eb','#1e3a8a'],['#cffafe','#0891b2','#134e5a'],
+  ['#ede9fe','#7c3aed','#3b1877'],['#fef3c7','#d97706','#6b3800'],
+  ['#e0e7ff','#4338ca','#1e1b4b'],['#fce7f3','#db2777','#6b0e3a'],
+  ['#d1fae5','#059669','#064e3b']
+];
+const colCache = {}; let colI = 0;
+function classColor(name) {
+  if (!colCache[name]) colCache[name] = PALETTES[colI++ % PALETTES.length];
+  return colCache[name];
+}
+['Chemical Oceanography','Fundamental to Oceanography Lab',
+ 'Comp. Programming for Oceanographers Lab','Delta and River System',
+ 'Computer Programming for Oceanographers'].forEach(classColor);
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let curSun = toSunday(new Date());
+let wData  = {};
+let activeM = null;
+
+// ── Gist config (stored in localStorage per device) ───────────────────────────
+function getCfg() {
+  try { return JSON.parse(localStorage.getItem('gist_cfg')||'{}'); } catch { return {}; }
+}
+function saveCfg(c) { localStorage.setItem('gist_cfg', JSON.stringify(c)); }
+
+// ── Gist API ──────────────────────────────────────────────────────────────────
+const GIST_FILE = 'schedule_data.json';
+
+async function gistGet() {
+  const { token, gistId } = getCfg();
+  if (!token || !gistId) return null;
+  const r = await fetch(`https://api.github.com/gists/${gistId}`, {
+    headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' }
+  });
+  if (!r.ok) throw new Error(`GitHub API error: ${r.status}`);
+  const data = await r.json();
+  const raw = data.files?.[GIST_FILE]?.content;
+  return raw ? JSON.parse(raw) : {};
+}
+
+async function gistSet(allData) {
+  const { token, gistId } = getCfg();
+  if (!token || !gistId) return;
+  const r = await fetch(`https://api.github.com/gists/${gistId}`, {
+    method: 'PATCH',
+    headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json',
+                'Content-Type': 'application/json' },
+    body: JSON.stringify({ files: { [GIST_FILE]: { content: JSON.stringify(allData, null, 2) } } })
+  });
+  if (!r.ok) throw new Error(`GitHub API error: ${r.status}`);
+}
+
+// ── Sync helpers ──────────────────────────────────────────────────────────────
+function setSyncStatus(state, msg) {
+  const dot = document.getElementById('syncDot');
+  const msgEl = document.getElementById('syncMsg');
+  dot.className = 'sync-dot ' + { ok:'dot-ok', off:'dot-off', err:'dot-err', busy:'dot-spin' }[state];
+  msgEl.innerHTML = msg;
+}
+
+// Load all week data from Gist into localStorage
+async function pullFromGist(manual=false) {
+  const { token, gistId } = getCfg();
+  if (!token || !gistId) {
+    if (manual) alert('Sync not configured. Click ⚙ Sync Setup first.');
+    return;
+  }
+  setSyncStatus('busy', 'Pulling from cloud…');
+  try {
+    const remote = await gistGet();
+    // Merge remote into localStorage
+    Object.entries(remote||{}).forEach(([k, v]) => {
+      localStorage.setItem('sch_'+k, JSON.stringify(v));
+    });
+    setSyncStatus('ok', `✓ Synced — last pull: ${new Date().toLocaleTimeString()}`);
+    wData = loadWeek(weekKey(curSun));
+    render();
+    if (manual) showToast('⬇ Pulled latest schedule from cloud!');
+  } catch(e) {
+    setSyncStatus('err', `✗ Pull failed: ${e.message}`);
+    if (manual) alert('Pull failed: '+e.message);
+  }
+}
+
+// Push all localStorage weeks up to Gist
+async function pushToGist(manual=false) {
+  const { token, gistId } = getCfg();
+  if (!token || !gistId) {
+    if (manual) alert('Sync not configured. Click ⚙ Sync Setup first.');
+    return;
+  }
+  setSyncStatus('busy', 'Pushing to cloud…');
+  try {
+    // Collect all week data from localStorage
+    const all = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('sch_')) {
+        try { all[k.replace('sch_','')] = JSON.parse(localStorage.getItem(k)); } catch{}
+      }
+    }
+    await gistSet(all);
+    setSyncStatus('ok', `✓ Synced — last push: ${new Date().toLocaleTimeString()}`);
+    if (manual) showToast('⬆ Schedule pushed to cloud!');
+  } catch(e) {
+    setSyncStatus('err', `✗ Push failed: ${e.message}`);
+    if (manual) alert('Push failed: '+e.message);
+  }
+}
+
+function initSyncStatus() {
+  const { token, gistId } = getCfg();
+  if (token && gistId) {
+    setSyncStatus('ok', '☁ Sync configured — use ⬇ Pull / ⬆ Push buttons');
+  } else {
+    setSyncStatus('off', 'Sync not configured — click <strong>⚙ Sync Setup</strong> to enable cross-device sync');
+  }
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.textContent = msg;
+  Object.assign(t.style, {
+    position:'fixed', bottom:'24px', left:'50%', transform:'translateX(-50%)',
+    background:'#1e2d4e', color:'#fff', padding:'10px 20px', borderRadius:'8px',
+    fontSize:'13px', zIndex:'999', boxShadow:'0 4px 20px rgba(0,0,0,.2)',
+    animation:'pop .2s ease-out'
+  });
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 2800);
+}
+
+// ── Settings modal ────────────────────────────────────────────────────────────
+function openSettings() {
+  const cfg = getCfg();
+  const box = document.getElementById('setBox');
+  const { token='', gistId='' } = cfg;
+  const isConfigured = !!(token && gistId);
+
+  box.innerHTML = `
+    <div class="mh">⚙ Sync Setup</div>
+    <div class="ms">Store your schedule in a GitHub Gist — free, private, cross-device</div>
+
+    ${isConfigured ? `<div style="margin-bottom:12px">
+      <span class="status-pill sp-ok">✓ Sync is configured</span>
+    </div>` : `<div style="margin-bottom:12px">
+      <span class="status-pill sp-off">⚠ Not yet configured</span>
+    </div>`}
+
+    <div class="set-section">
+      <div class="set-title">Step-by-step setup</div>
+      <div class="step-box">
+        <div class="step"><div class="sn">1</div><div>Go to <a href="https://github.com" target="_blank"><strong>github.com</strong></a> and sign in (or create a free account).</div></div>
+        <div class="step"><div class="sn">2</div><div>Go to <a href="https://gist.github.com" target="_blank"><strong>gist.github.com</strong></a> → click <strong>+</strong> (New Gist) → filename: <span class="code">schedule_data.json</span> → content: <span class="code">{}</span> → click <strong>Create secret gist</strong>. Copy the Gist ID from the URL (the long code after <code>gist.github.com/username/</code>).</div></div>
+        <div class="step"><div class="sn">3</div><div>Go to <a href="https://github.com/settings/tokens/new" target="_blank"><strong>github.com/settings/tokens/new</strong></a> → note: <span class="code">schedule-sync</span> → tick <strong>gist</strong> → click <strong>Generate token</strong>. Copy the token (shown once only).</div></div>
+        <div class="step"><div class="sn">4</div><div>Paste both below and click Save. Repeat steps 3–4 on each device (use the same Gist ID, generate a new token each time).</div></div>
+      </div>
+    </div>
+
+    <div class="set-row">
+      <label class="mlbl">GitHub Personal Access Token</label>
+      <input class="minp" id="setToken" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" value="${esc(token)}" autocomplete="off"/>
+      <div class="set-hint">Token stays on <strong>this device only</strong> in your browser. Never shared.</div>
+    </div>
+    <div class="set-row">
+      <label class="mlbl">Gist ID</label>
+      <input class="minp" id="setGist" type="text" placeholder="a1b2c3d4e5f6..." value="${esc(gistId)}" autocomplete="off"/>
+      <div class="set-hint">The long ID from your Gist URL. Same on all devices.</div>
+    </div>
+
+    <div class="macts">
+      <button class="btn btn-prim" onclick="saveSettings()">💾 Save & Test Connection</button>
+      <button class="btn btn-sec" onclick="closeSet()">Cancel</button>
+    </div>
+    ${isConfigured ? `<button class="reset-link" onclick="clearSettings()">✕ Clear sync configuration</button>` : ''}
+  `;
+  document.getElementById('setOverlay').classList.remove('hid');
+}
+
+async function saveSettings() {
+  const token = document.getElementById('setToken').value.trim();
+  const gistId = document.getElementById('setGist').value.trim();
+  if (!token || !gistId) { alert('Please fill in both fields.'); return; }
+
+  saveCfg({ token, gistId });
+  setSyncStatus('busy', 'Testing connection…');
+
+  try {
+    await gistGet(); // just test it
+    setSyncStatus('ok', '☁ Sync configured — use ⬇ Pull / ⬆ Push buttons');
+    closeSet();
+    showToast('✓ Sync connected! Use ⬆ Push to upload your current schedule.');
+  } catch(e) {
+    setSyncStatus('err', `✗ Connection failed: ${e.message}`);
+    alert('Connection failed: ' + e.message + '\n\nCheck your token and Gist ID.');
+  }
+}
+
+function clearSettings() {
+  if (!confirm('Remove sync configuration from this device?')) return;
+  localStorage.removeItem('gist_cfg');
+  initSyncStatus();
+  closeSet();
+  showToast('Sync configuration cleared.');
+}
+
+function closeSet() { document.getElementById('setOverlay').classList.add('hid'); }
+function setOverlayClick(e) { if (e.target.id==='setOverlay') closeSet(); }
+
+// ── Week utilities ─────────────────────────────────────────────────────────────
+function toSunday(d) { const r=new Date(d); r.setHours(0,0,0,0); r.setDate(r.getDate()-r.getDay()); return r; }
+function weekKey(sun) { return sun.toISOString().slice(0,10); }
+function fmtDate(d) { return d.toLocaleDateString('en-US',{month:'short',day:'numeric'}); }
+function weekLabel(sun) { const t=new Date(sun); t.setDate(sun.getDate()+4); return `${fmtDate(sun)} – ${fmtDate(t)}, ${t.getFullYear()}`; }
+function dayDate(sun,di) { const d=new Date(sun); d.setDate(sun.getDate()+di); return d; }
+function isToday(d) { return d.toDateString()===new Date().toDateString(); }
+
+// ── Storage ────────────────────────────────────────────────────────────────────
+function loadWeek(k) { try{ const r=localStorage.getItem('sch_'+k); return r?JSON.parse(r):{}; }catch{return {};} }
+function saveWeek() { try{ localStorage.setItem('sch_'+weekKey(curSun), JSON.stringify(wData)); }catch{} }
+
+// ── Cell state ─────────────────────────────────────────────────────────────────
+function cellState(di,si) {
+  const ov=wData[`${di}_${si}`], def=DEF[di]?.[si];
+  if(ov) {
+    if(ov.status==='cancelled') return {type:'cancelled',name:def||'',origName:def};
+    if(ov.status==='added')     return {type:'added',name:ov.name,origName:null};
+    if(ov.status==='active')    return {type:'modified',name:ov.name||def,origName:def};
+  }
+  if(def) return {type:'active',name:def,origName:def};
+  return {type:'empty',name:null,origName:null};
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────────
+function render() {
+  wData = loadWeek(weekKey(curSun));
+  document.getElementById('weekLbl').textContent = weekLabel(curSun);
+  const g = document.getElementById('grid');
+  g.innerHTML = '';
+
+  el(g,'div','dh corner','<div class="dn" style="opacity:.3;font-size:10px">TIME</div>');
+  for(let d=0;d<5;d++){
+    const dd=dayDate(curSun,d), tod=isToday(dd);
+    const div=document.createElement('div');
+    div.className='dh'+(tod?' today-hd':'');
+    div.innerHTML=`<div class="dn">${DSHORT[d]}${tod?' <span style="font-size:9px;opacity:.8">TODAY</span>':''}</div><div class="dd">${fmtDate(dd)}</div>`;
+    g.appendChild(div);
+  }
+
+  for(let s=0;s<7;s++){
+    const isL=s===LUNCH;
+    const tc=document.createElement('div');
+    tc.className='tc'+(isL?' lt':'');
+    tc.innerHTML=`<span>${SLBLS[s]}</span>${isL?'<span class="lunch-tag">Lunch</span>':''}`;
+    g.appendChild(tc);
+
+    for(let d=0;d<5;d++){
+      const dd=dayDate(curSun,d), st=cellState(d,s), tod=isToday(dd);
+      const groupable=st.type!=='empty'&&st.type!=='cancelled';
+      let gCls='';
+      if(groupable){
+        const ps=cellState(d,s-1),ns=cellState(d,s+1);
+        const pG=s>0&&ps.type!=='empty'&&ps.type!=='cancelled'&&ps.name===st.name;
+        const nG=s<6&&ns.type!=='empty'&&ns.type!=='cancelled'&&ns.name===st.name;
+        if(!pG&&nG) gCls='gs'; else if(pG&&nG) gCls='gm'; else if(pG&&!nG) gCls='ge';
+      }
+      const cell=document.createElement('div');
+      const lsCls=isL&&st.type==='empty'?' ls':'';
+      const todCls=tod?' tc-col':'';
+      cell.className=`sc${lsCls}${todCls}${gCls?' '+gCls:''}`;
+      cell.onclick=()=>clickCell(d,s);
+
+      if(st.type==='empty'){
+        cell.innerHTML='<div class="add-hint">＋</div>';
+      } else {
+        const isCont=gCls==='gm'||gCls==='ge';
+        const [bg,bdr,col]=st.type==='cancelled'?['#f0f0f4','#a0a0b0','#a0a0b0']:
+                           st.type==='added'?['#d4f5e6','#059669','#065f46']:
+                           classColor(st.origName||st.name);
+        const mCls=st.type==='cancelled'?'cancelled':st.type==='added'?'added':st.type==='modified'?'modified':'';
+        const badge=st.type==='modified'?'<span class="cbadge">✏️ Renamed</span>':
+                    st.type==='added'?'<span class="cbadge">✚ Added this week</span>':
+                    st.type==='cancelled'?'<span class="cbadge">✕ Cancelled</span>':'';
+        cell.innerHTML=isCont
+          ?`<div class="cc ${mCls}" style="background:${bg};border-left-color:${bdr}"><div class="cont-dot">· · ·</div></div>`
+          :`<div class="cc ${mCls}" style="background:${bg};border-left-color:${bdr};color:${col}">
+              <div class="cn">${esc(st.name)}</div>${badge}
+            </div>`;
+      }
+      g.appendChild(cell);
+    }
+  }
+}
+
+function el(p,t,c,h){ const e=document.createElement(t); e.className=c; e.innerHTML=h; p.appendChild(e); return e; }
+function esc(s){ return s?s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'):''; }
+
+// ── Navigation ─────────────────────────────────────────────────────────────────
+function changeWeek(dir){ curSun=new Date(curSun); curSun.setDate(curSun.getDate()+dir*7); render(); }
+function goNow(){ curSun=toSunday(new Date()); render(); }
+function resetWeek(){ if(!confirm('Reset ALL changes this week to the default schedule?')) return; wData={}; saveWeek(); render(); }
+
+// ── Class modal ─────────────────────────────────────────────────────────────────
+function clickCell(di,si){
+  const st=cellState(di,si), dd=dayDate(curSun,di);
+  activeM={di,si};
+  const dayLbl=`${DAYS[di]}, ${fmtDate(dd)}`, slotLbl=SLOTS[si];
+  const box=document.getElementById('mbox');
+
+  if(st.type==='empty'){
+    box.innerHTML=`
+      <div class="mh">Add a Class</div>
+      <div class="ms">${esc(dayLbl)} · ${slotLbl}</div>
+      <label class="mlbl">Class name (this week only)</label>
+      <input class="minp" id="addInp" type="text" placeholder="e.g. Lab Final Exam – Batch B" autocomplete="off"/>
+      <div class="macts">
+        <button class="btn btn-prim" onclick="doAdd()">✚ Add Class</button>
+        <button class="btn btn-sec" onclick="closeM()">Cancel</button>
+      </div>`;
+    setTimeout(()=>document.getElementById('addInp')?.focus(),50);
+  } else if(st.type==='cancelled'){
+    box.innerHTML=`
+      <div class="mh">${esc(dayLbl)}</div>
+      <div class="ms">${slotLbl}</div>
+      <span class="badge bc">✕ Cancelled</span>
+      <div class="mcn" style="text-decoration:line-through;color:#a0a0b0">${esc(st.name)}</div>
+      <div class="macts">
+        <button class="btn btn-restore" onclick="doRestore()">↺ Restore Class</button>
+        <button class="btn btn-sec" onclick="closeM()">Close</button>
+      </div>`;
+  } else {
+    const badgeCls=st.type==='active'?'ba':st.type==='modified'?'bm':st.type==='added'?'bg':'ba';
+    const badgeTxt=st.type==='active'?'✓ Active':st.type==='modified'?'✏️ Modified':'✚ Added this week';
+    box.innerHTML=`
+      <div class="mh">${esc(dayLbl)}</div>
+      <div class="ms">${slotLbl}</div>
+      <span class="badge ${badgeCls}">${badgeTxt}</span>
+      <div class="mcn">${esc(st.name)}</div>
+      <hr class="mdiv"/>
+      <label class="mlbl">Rename for this week only</label>
+      <input class="minp" id="renInp" type="text" value="${esc(st.name)}" autocomplete="off"/>
+      ${st.origName?`<div class="mdef">📌 Default: ${esc(st.origName)}</div>`:''}
+      <div class="macts">
+        <button class="btn btn-prim" onclick="doRename()">💾 Save Name</button>
+        ${st.type!=='added'
+          ?`<button class="btn btn-danger" onclick="doCancel()">✕ Cancel Class</button>`
+          :`<button class="btn btn-danger" onclick="doRemove()">🗑 Remove</button>`}
+        <button class="btn btn-sec" onclick="closeM()">Close</button>
+      </div>
+      ${st.type==='modified'||st.type==='added'
+        ?`<button class="reset-link" onclick="doReset()">↺ Reset to original name</button>`:''}`;
+    setTimeout(()=>{ const i=document.getElementById('renInp'); if(i){i.focus();i.select();} },50);
+  }
+  document.getElementById('overlay').classList.remove('hid');
+}
+
+function closeM(){ document.getElementById('overlay').classList.add('hid'); activeM=null; }
+function overlayClick(e){ if(e.target.id==='overlay') closeM(); }
+
+function saveAndSync(){ saveWeek(); render(); pushToGist(); }
+function doAdd(){ const v=document.getElementById('addInp')?.value.trim(); if(!v){document.getElementById('addInp')?.focus();return;} wData[`${activeM.di}_${activeM.si}`]={status:'added',name:v}; closeM(); saveAndSync(); }
+function doCancel(){ wData[`${activeM.di}_${activeM.si}`]={status:'cancelled'}; closeM(); saveAndSync(); }
+function doRestore(){ delete wData[`${activeM.di}_${activeM.si}`]; closeM(); saveAndSync(); }
+function doRemove(){ delete wData[`${activeM.di}_${activeM.si}`]; closeM(); saveAndSync(); }
+function doRename(){
+  const v=document.getElementById('renInp')?.value.trim(); if(!v){document.getElementById('renInp')?.focus();return;}
+  const{di,si}=activeM, def=DEF[di]?.[si], ov=wData[`${di}_${si}`];
+  if(ov?.status==='added') wData[`${di}_${si}`]={status:'added',name:v};
+  else if(v===def) delete wData[`${di}_${si}`];
+  else wData[`${di}_${si}`]={status:'active',name:v};
+  closeM(); saveAndSync();
+}
+function doReset(){ delete wData[`${activeM.di}_${activeM.si}`]; closeM(); saveAndSync(); }
+
+// ── Keyboard ───────────────────────────────────────────────────────────────────
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){ closeM(); closeSet(); }
+  if(e.key==='Enter'){
+    const ai=document.getElementById('addInp'), ri=document.getElementById('renInp');
+    if(ai&&document.activeElement===ai) doAdd();
+    if(ri&&document.activeElement===ri) doRename();
+  }
+});
+
+// ── Init ───────────────────────────────────────────────────────────────────────
+initSyncStatus();
+render();
+// Auto-pull on page load if configured
+const { token, gistId } = getCfg();
+if (token && gistId) pullFromGist();
+</script>
+</body>
+</html>
